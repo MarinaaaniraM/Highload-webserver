@@ -3,7 +3,8 @@ package main
 import "net"
 import "fmt"
 import "strings"
-// import "io/ioutil"
+import "io/ioutil"
+
 
 func main() {
 
@@ -36,16 +37,42 @@ func handleConnection(conn net.Conn) {
     // }
 
     conn.Read(buf)
-    fmt.Println(string(buf))
+
+    // fmt.Println("Buffer: ", string(buf))
 
     header := strings.Split(string(buf), "\n")
     fmt.Println(header[0])
     request := strings.Split(header[0], " ")
-    fmt.Println(request[1])
 
-    if request == "/" {
-        // Отдаем index.html
-    } else {
-        // Отдаем файл по указанному пути
-    }
+
+    if request[0] == "GET" {
+	    fmt.Println(request[1])
+
+	    if request[1] == "/" {
+
+	    	file, err := ioutil.ReadFile("index.html")
+			if err != nil {
+		        fmt.Println("Error readFile")
+		    }
+
+			var response_header string = "HTTP/1.1 200 OK\nContent-Type: text/html\nDate: Sun, 22 Feb 2015 20:40:57 GMT\nContent-Length:" + string(len(string(file))) + "\n\n"
+	    	_, errr := conn.Write([]byte(response_header + string(file)))
+			if errr != nil {
+		        fmt.Println("Error write")
+		    }
+	    }
+	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
