@@ -73,9 +73,9 @@ func handleConnection(conn net.Conn) {
 
         if strings.Count(header[1], "../") > strings.Count(rootDir, "/") {
             responseStatus = "403 Forbidden"
-            
+
         } else if strings.HasSuffix(header[1], "/") {
-            path = rootDir + header[1] + "index.html"
+            path = rootDir + strings.Split(header[1], "?")[0] + "index.html"
 
             file, err := ioutil.ReadFile(path)
             if err != nil {
@@ -85,7 +85,7 @@ func handleConnection(conn net.Conn) {
             fileString = string(file)
 
 	    } else {
-            path= rootDir + header[1]
+            path= rootDir + strings.Split(header[1], "?")[0]
 
             file, err := ioutil.ReadFile(path)
             if err != nil {
@@ -100,17 +100,21 @@ func handleConnection(conn net.Conn) {
         responseStatus = "405 Method Not Allowed"
     }
 
-    var httpState string = "HTTP/1.1 " + responseStatus + "\n"
-    var httpContentType string = "Content-Type: " + parser.GetContentType(path) + "\n"
-    var httpContentLength string = "Content-Length: " + strconv.Itoa(len(fileString)) + "\n"
-    var serverName string = "Server: Cheburashka_v0.1\n"
+    var httpState string = "HTTP/1.1 " + responseStatus + "\r\n"
+    var httpContentType string = "Content-Type: " + parser.GetContentType(path) + "\r\n"
+    var httpContentLength string = "Content-Length: " + strconv.Itoa(len(fileString)) + "\r\n"
+    var serverName string = "Server: Cheburashka_v0.1\r\n"
 
-    var responseHeader string = httpState + httpContentType + httpContentLength + serverName + "\n"
-    _, errr := conn.Write([]byte(responseHeader + fileString))
+    var responseHeader string = httpState + httpContentType + httpContentLength + serverName + "\r\n"
+    fmt.Println("Response header: \r\n", responseHeader)
+
+    if header[0] == "GET" {
+        responseHeader = responseHeader + fileString
+    }
+    _, errr := conn.Write([]byte(responseHeader))
     if errr != nil {
         fmt.Println("Error write: ", errr)
     }
-    fmt.Println("Response header: \n", responseHeader)
 
     fmt.Println("\n")
 }
