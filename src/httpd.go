@@ -7,8 +7,9 @@ import "io/ioutil"
 import "runtime"
 import "os"
 import "strconv"
+import "parser"
 
-var rootDir string = ""
+var rootDir string = "."
 var ncpu int = 1
 
 func main() {
@@ -23,7 +24,7 @@ func main() {
         }
         switch os.Args[i - 1] {
         case "-r": 
-            rootDir = os.Args[i]
+            rootDir = strings.TrimRight(os.Args[i], "/")
         case "-c":
             i, er := strconv.Atoi(os.Args[i])
             if er != nil {
@@ -36,9 +37,11 @@ func main() {
     }
 
     runtime.GOMAXPROCS(ncpu)
+
+    fmt.Println("\n")
     fmt.Println("Launching server...")
 
-    ln, err := net.Listen("tcp", ":8888")
+    ln, err := net.Listen("tcp", ":8080")
     if err != nil {
         fmt.Println("Error listen: ", err)
     }
@@ -47,56 +50,50 @@ func main() {
         if err != nil {
             fmt.Println("Error accept: ", err)
         }
-
         go handleConnection(conn)
     }
 }
 
 func handleConnection(conn net.Conn) {
     runtime.Gosched()
-
     defer conn.Close()
 
     var buf = make ([]byte, 1024)
     conn.Read(buf)
 
     header := strings.Split(string(buf), "\n")
-    fmt.Println(header[0])
-    request := strings.Split(header[0], " ")
+    header = strings.Split(header[0], " ")
+  
+    fmt.Println("Header: ", header)
 
+    if header[0] == "GET" || header[0] == "HEAD" {
+        fmt.Println("Request: " + header[1])
+        var path string
 
-    if request[0] == "GET" || request[0] == "HEAD" {
-	    if request[1] == "/" {
-
-	    	file, err := ioutil.ReadFile(rootDir + "index.html")
-			if err != nil {
-		        fmt.Println("Error readFile: ", err)
-		    }
-
-			var response_header string = "HTTP/1.1 200 OK\nContent-Type: text/html\nDate: Sun, 22 Feb 2015 20:40:57 GMT\nContent-Length:" + string(len(string(file))) + "\n\n"
-	    	_, errr := conn.Write([]byte(response_header + string(file)))
-			if errr != nil {
-		        fmt.Println("Error write: ", errr)
-		    }
+	    if strings.HasSuffix(header[1], "/") {
+            path = rootDir + header[1] + "index.html"
 	    } else {
-            var path string = strings.TrimPrefix(request[1], "/")
-            fmt.Println(path)
-            
-            file, err := ioutil.ReadFile(string(path))
-            if err != nil {
-                fmt.Println("Error readFile: ", err)
-            }
+            path= rootDir + header[1]
+        }
+        fmt.Println("Path: " + path)
 
-            var response_header string = "HTTP/1.1 200 OK\nContent-Type: image\nDate: Sun, 22 Feb 2015 20:40:57 GMT\nContent-Length:" + string(len(string(file))) + "\n\n"
-            _, errr := conn.Write([]byte(response_header + string(file)))
-            if errr != nil {
-                fmt.Println("Error write: ", errr)
-            }
+        file, err := ioutil.ReadFile(path)
+        if err != nil {
+            fmt.Println("Error readFile: ", err)
         }
 
+        var httpState string = "HTTP/1.1 200 OK\n"
+        var httpContentType string = "Content-Type: " + parser.GetContentType(path) + "\n"
+        var httpContentLength string = "Content-Length: " + strconv.Itoa(len(file)) + "\n"
 
-
+        var responseHeader string = httpState + httpContentType + httpContentLength + "\n"
+        _, errr := conn.Write([]byte(responseHeader + string(file)))
+        if errr != nil {
+            fmt.Println("Error write: ", errr)
+        }
+        fmt.Println("Response header: \n", responseHeader)
 	}
+    fmt.Println("\n")
 }
 
 

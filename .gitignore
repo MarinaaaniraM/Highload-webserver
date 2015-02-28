@@ -3,6 +3,8 @@
 *.a
 *.so
 
+/test-suite
+
 # Folders
 _obj
 _test
