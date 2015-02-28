@@ -29,7 +29,6 @@ func main() {
             i, er := strconv.Atoi(os.Args[i])
             if er != nil {
                 fmt.Println("Error strconv: ", er)
-                // os.Exit(2)
             }
             ncpu = i
         }
@@ -63,36 +62,56 @@ func handleConnection(conn net.Conn) {
 
     header := strings.Split(string(buf), "\n")
     header = strings.Split(header[0], " ")
-  
+    var path string
+    var responseStatus string = "200 OK"
+    var fileString string
+
     fmt.Println("Header: ", header)
 
     if header[0] == "GET" || header[0] == "HEAD" {
         fmt.Println("Request: " + header[1])
-        var path string
 
-	    if strings.HasSuffix(header[1], "/") {
+        if strings.Count(header[1], "../") > strings.Count(rootDir, "/") {
+            responseStatus = "403 Forbidden"
+            
+        } else if strings.HasSuffix(header[1], "/") {
             path = rootDir + header[1] + "index.html"
+
+            file, err := ioutil.ReadFile(path)
+            if err != nil {
+                fmt.Println("Error readFile: ", err)
+                responseStatus = "403 Forbidden"
+            }
+            fileString = string(file)
+
 	    } else {
             path= rootDir + header[1]
+
+            file, err := ioutil.ReadFile(path)
+            if err != nil {
+                fmt.Println("Error readFile: ", err)
+                responseStatus = "404 Not Found"
+            }
+            fileString = string(file)
         }
         fmt.Println("Path: " + path)
 
-        file, err := ioutil.ReadFile(path)
-        if err != nil {
-            fmt.Println("Error readFile: ", err)
-        }
+	} else {
+        responseStatus = "405 Method Not Allowed"
+    }
 
-        var httpState string = "HTTP/1.1 200 OK\n"
-        var httpContentType string = "Content-Type: " + parser.GetContentType(path) + "\n"
-        var httpContentLength string = "Content-Length: " + strconv.Itoa(len(file)) + "\n"
+    var httpState string = "HTTP/1.1 " + responseStatus + "\n"
+    var httpContentType string = "Content-Type: " + parser.GetContentType(path) + "\n"
+    var httpContentLength string = "Content-Length: " + strconv.Itoa(len(fileString)) + "\n"
+    var serverName string = "Server: Cheburashka_v0.1\n"
 
-        var responseHeader string = httpState + httpContentType + httpContentLength + "\n"
-        _, errr := conn.Write([]byte(responseHeader + string(file)))
-        if errr != nil {
-            fmt.Println("Error write: ", errr)
-        }
-        fmt.Println("Response header: \n", responseHeader)
-	}
+    var responseHeader string = httpState + httpContentType + httpContentLength + serverName + "\n"
+    _, errr := conn.Write([]byte(responseHeader + fileString))
+    if errr != nil {
+        fmt.Println("Error write: ", errr)
+    }
+    fmt.Println("Response header: \n", responseHeader)
+
     fmt.Println("\n")
 }
 
