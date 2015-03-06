@@ -8,6 +8,7 @@ import "runtime"
 import "os"
 import "strconv"
 import "parser"
+import "net/url"
 
 var rootDir string = "."
 var ncpu int = 1
@@ -69,35 +70,45 @@ func handleConnection(conn net.Conn) {
     fmt.Println("Header: ", header)
 
     if header[0] == "GET" || header[0] == "HEAD" {
-        fmt.Println("Request: " + header[1])
 
-        if strings.Count(header[1], "../") > strings.Count(rootDir, "/") {
-            responseStatus = "403 Forbidden"
+        url, err := url.Parse(header[1])
+        if err != nil {
+            fmt.Println("Error parse url")
+        }
 
-        } else if strings.HasSuffix(header[1], "/") {
-            path = rootDir + strings.Split(header[1], "?")[0] + "index.html"
+        fmt.Println("Request: " + url.Path)
+
+
+        //TODO date!!!
+        
+
+        if strings.Count(url.Path, "../") > strings.Count(rootDir, "/") {
+            responseStatus = "403 Forbidden"                                    //TODO
+
+        } else if strings.HasSuffix(url.Path, "/") {
+            path = rootDir + strings.Split(url.Path, "?")[0] + "index.html"
 
             file, err := ioutil.ReadFile(path)
             if err != nil {
                 fmt.Println("Error readFile: ", err)
-                responseStatus = "403 Forbidden"
+                responseStatus = "403 Forbidden"                                //TODO
             }
             fileString = string(file)
 
 	    } else {
-            path= rootDir + strings.Split(header[1], "?")[0]
+            path= rootDir + strings.Split(url.Path, "?")[0]
 
             file, err := ioutil.ReadFile(path)
             if err != nil {
                 fmt.Println("Error readFile: ", err)
-                responseStatus = "404 Not Found"
+                responseStatus = "404 Not Found"                                //TODO
             }
             fileString = string(file)
         }
         fmt.Println("Path: " + path)
 
 	} else {
-        responseStatus = "405 Method Not Allowed"
+        responseStatus = "405 Method Not Allowed"                               //TODO
     }
 
     var httpState string = "HTTP/1.1 " + responseStatus + "\r\n"
