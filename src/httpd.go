@@ -12,7 +12,6 @@ import (
     "net/url"
     "time"
 )
-// import "conf"
 
 var rootDir string = "."
 var ncpu int = 1
