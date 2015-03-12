@@ -13,7 +13,7 @@ import (
     "time"
 )
 
-var rootDir string = "."
+var rootDir string = "static"
 var ncpu int = 1
 var isLogging bool =  false
 
@@ -51,7 +51,7 @@ func main() {
     logging("\n")
     logging("Launching server...")
 
-    ln, err := net.Listen("tcp", ":8080")                                       //TODO
+    ln, err := net.Listen("tcp", ":80")                                       //TODO
     if err != nil {
         logging("Error listen: " + err.Error())
     }
